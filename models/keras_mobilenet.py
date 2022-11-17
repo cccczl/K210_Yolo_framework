@@ -228,64 +228,7 @@ def MobileNet(input_shape=None,
     x = _depthwise_conv_block(x, 1024, alpha, depth_multiplier, strides=(2, 2), block_id=12)
     x = _depthwise_conv_block(x, 1024, alpha, depth_multiplier, block_id=13)
 
-    # if include_top:
-    #     if backend.image_data_format() == 'channels_first':
-    #         shape = (int(1024 * alpha), 1, 1)
-    #     else:
-    #         shape = (1, 1, int(1024 * alpha))
-
-    #     x = layers.GlobalAveragePooling2D()(x)
-    #     x = layers.Reshape(shape, name='reshape_1')(x)
-    #     x = layers.Dropout(dropout, name='dropout')(x)
-    #     x = layers.Conv2D(classes, (1, 1),
-    #                       padding='same',
-    #                       name='conv_preds')(x)
-    #     x = layers.Reshape((classes,), name='reshape_2')(x)
-    #     x = layers.Activation('softmax', name='act_softmax')(x)
-    # else:
-    #     if pooling == 'avg':
-    #         x = layers.GlobalAveragePooling2D()(x)
-    #     elif pooling == 'max':
-    #         x = layers.GlobalMaxPooling2D()(x)
-
-    # Ensure that the model takes into account
-    # any potential predecessors of `input_tensor`.
-    # if input_tensor is not None:
-    #     inputs = keras_utils.get_source_inputs(input_tensor)
-    # else:
-    #     inputs = img_input
-
-    # Create model.
-    model = models.Model(img_input, x, name='mobilenet_v1')
-
-    # Load weights.
-    # if weights == 'imagenet':
-    #     if alpha == 1.0:
-    #         alpha_text = '1_0'
-    #     elif alpha == 0.75:
-    #         alpha_text = '7_5'
-    #     elif alpha == 0.50:
-    #         alpha_text = '5_0'
-    #     else:
-    #         alpha_text = '2_5'
-
-    #     if include_top:
-    #         model_name = 'mobilenet_%s_%d_tf.h5' % (alpha_text, rows)
-    #         weight_path = BASE_WEIGHT_PATH + model_name
-    #         weights_path = keras_utils.get_file(model_name,
-    #                                             weight_path,
-    #                                             cache_subdir='models')
-    #     else:
-    #         model_name = 'mobilenet_%s_%d_tf_no_top.h5' % (alpha_text, rows)
-    #         weight_path = BASE_WEIGHT_PATH + model_name
-    #         weights_path = keras_utils.get_file(model_name,
-    #                                             weight_path,
-    #                                             cache_subdir='models')
-    #     model.load_weights(weights_path)
-    # elif weights is not None:
-    #     model.load_weights(weights)
-
-    return model
+    return models.Model(img_input, x, name='mobilenet_v1')
 
 
 def _conv_block(inputs, filters, alpha, kernel=(3, 3), strides=(1, 1)):

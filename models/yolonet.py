@@ -183,7 +183,7 @@ def yolo(input_shape, anchor_num, class_num, **kwargs) -> [keras.Model, keras.Mo
     new_weights = yolo_model.get_weights()
     for i in range(len(yolo_weight)):
         minshape = [min(new_weights[i].shape[j], yolo_weight[i].shape[j]) for j in range(len(yolo_weight[i].shape))]
-        newshape = tuple([slice(0, s) for s in minshape])
+        newshape = tuple(slice(0, s) for s in minshape)
         new_weights[i][newshape] = yolo_weight[i][newshape]
 
     yolo_model.set_weights(new_weights)
@@ -196,7 +196,7 @@ def resblock_body(x, num_filters, num_blocks):
     # Darknet uses left and top padding instead of 'same' mode
     x = ZeroPadding2D(((1, 0), (1, 0)))(x)
     x = DarknetConv2D_BN_Leaky(num_filters, (3, 3), strides=(2, 2))(x)
-    for i in range(num_blocks):
+    for _ in range(num_blocks):
         y = compose(
             DarknetConv2D_BN_Leaky(num_filters // 2, (1, 1)),
             DarknetConv2D_BN_Leaky(num_filters, (3, 3)))(x)
@@ -246,14 +246,13 @@ def DarknetConv2D(*args, **kwargs):
     """Wrapper to set Darknet parameters for Convolution2D."""
     darknet_conv_kwargs = {'kernel_regularizer': keras.regularizers.l2(5e-4)}
     darknet_conv_kwargs['padding'] = 'valid' if kwargs.get('strides') == (2, 2) else 'same'
-    darknet_conv_kwargs.update(kwargs)
+    darknet_conv_kwargs |= kwargs
     return Conv2D(*args, **darknet_conv_kwargs)
 
 
 def DarknetConv2D_BN_Leaky(*args, **kwargs):
     """Darknet Convolution2D followed by BatchNormalization and LeakyReLU."""
-    no_bias_kwargs = {'use_bias': False}
-    no_bias_kwargs.update(kwargs)
+    no_bias_kwargs = {'use_bias': False} | kwargs
     return compose(
         DarknetConv2D(*args, **no_bias_kwargs),
         BatchNormalization(),

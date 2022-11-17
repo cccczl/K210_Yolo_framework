@@ -80,7 +80,7 @@ def main(ckpt_weights, image_size, output_size, model_def, class_num, depth_mult
     yolo_model_warpper.load_weights(str(ckpt_weights))
     print(INFO, f' Load CKPT {str(ckpt_weights)}')
     orig_img = h._read_img(str(test_image))
-    image_shape = orig_img.shape[0:2]
+    image_shape = orig_img.shape[:2]
     img, _ = h._process_img(orig_img, true_box=None, is_training=False, is_resize=True)
 
     """ load images """

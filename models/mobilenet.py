@@ -54,9 +54,10 @@ def _fixed_padding(inputs, kernel_size, rate=1):
     pad_total = [kernel_size_effective[0] - 1, kernel_size_effective[1] - 1]
     pad_beg = [pad_total[0] // 2, pad_total[1] // 2]
     pad_end = [pad_total[0] - pad_beg[0], pad_total[1] - pad_beg[1]]
-    padded_inputs = tf.pad(inputs, [[0, 0], [pad_beg[0], pad_end[0]],
-                                    [pad_beg[1], pad_end[1]], [0, 0]])
-    return padded_inputs
+    return tf.pad(
+        inputs,
+        [[0, 0], [pad_beg[0], pad_end[0]], [pad_beg[1], pad_end[1]], [0, 0]],
+    )
 
 
 def _make_divisible(v, divisor, min_value=None):
@@ -80,10 +81,7 @@ def _set_arg_scope_defaults(defaults):
     Yields:
       context manager where all defaults are set.
     """
-    if hasattr(defaults, 'items'):
-        items = list(defaults.items())
-    else:
-        items = defaults
+    items = list(defaults.items()) if hasattr(defaults, 'items') else defaults
     if not items:
         yield
     else:
@@ -137,9 +135,9 @@ def safe_arg_scope(funcs, **kwargs):
     Note: can be useful if None value should be interpreted as "do not overwrite
       this parameter value".
     """
-    filtered_args = {name: value for name, value in kwargs.items()
-                     if value is not None}
-    if filtered_args:
+    if filtered_args := {
+        name: value for name, value in kwargs.items() if value is not None
+    }:
         return slim.arg_scope(funcs, **filtered_args)
     else:
         return NoOpScope()
@@ -217,9 +215,10 @@ def mobilenet_base(  # pylint: disable=invalid-name
         conv_defs_overrides[
             (slim.conv2d, slim.separable_conv2d)] = {'padding': 'VALID'}
 
-    if output_stride is not None:
-        if output_stride == 0 or (output_stride > 1 and output_stride % 2):
-            raise ValueError('Output stride must be None, 1 or a multiple of 2.')
+    if output_stride is not None and (
+        output_stride == 0 or (output_stride > 1 and output_stride % 2)
+    ):
+        raise ValueError('Output stride must be None, 1 or a multiple of 2.')
 
     # a) Set the tensorflow scope
     # b) set padding to default: note we might consider removing this
@@ -227,10 +226,7 @@ def mobilenet_base(  # pylint: disable=invalid-name
     # c) set all defaults
     # d) set all extra overrides.
     # pylint: disable=g-backslash-continuation
-    with _scope_all(scope, default_scope='Mobilenet'), \
-            safe_arg_scope([slim.batch_norm], is_training=is_training), \
-            _set_arg_scope_defaults(conv_defs_defaults), \
-            _set_arg_scope_defaults(conv_defs_overrides):
+    with _scope_all(scope, default_scope='Mobilenet'), safe_arg_scope([slim.batch_norm], is_training=is_training), _set_arg_scope_defaults(conv_defs_defaults), _set_arg_scope_defaults(conv_defs_overrides):
         # The current_stride variable keeps track of the output stride of the
         # activations, i.e., the running product of convolution strides up to the
         # current network layer. This allows us to invoke atrous convolution
@@ -265,15 +261,17 @@ def mobilenet_base(  # pylint: disable=invalid-name
             # Update params.
             params['stride'] = layer_stride
             # Only insert rate to params if rate > 1 and kernel size is not [1, 1].
-            if layer_rate > 1:
-                if tuple(params.get('kernel_size', [])) != (1, 1):
-                    # We will apply atrous rate in the following cases:
-                    # 1) When kernel_size is not in params, the operation then uses
-                    #   default kernel size 3x3.
-                    # 2) When kernel_size is in params, and if the kernel_size is not
-                    #   equal to (1, 1) (there is no need to apply atrous convolution to
-                    #   any 1x1 convolution).
-                    params['rate'] = layer_rate
+            if layer_rate > 1 and tuple(params.get('kernel_size', [])) != (
+                1,
+                1,
+            ):
+                # We will apply atrous rate in the following cases:
+                # 1) When kernel_size is not in params, the operation then uses
+                #   default kernel size 3x3.
+                # 2) When kernel_size is in params, and if the kernel_size is not
+                #   equal to (1, 1) (there is no need to apply atrous convolution to
+                #   any 1x1 convolution).
+                params['rate'] = layer_rate
             # Set padding
             if use_explicit_padding:
                 if 'kernel_size' in params:
@@ -306,7 +304,7 @@ def mobilenet_base(  # pylint: disable=invalid-name
             scope = os.path.dirname(t.name)
             bn = os.path.basename(t.name)
             if scope in scopes and t.name.endswith('output'):
-                end_points[scopes[scope] + '/' + bn] = t.outputs[0]
+                end_points[f'{scopes[scope]}/{bn}'] = t.outputs[0]
         return net, end_points
 
 

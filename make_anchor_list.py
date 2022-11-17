@@ -54,8 +54,7 @@ def findClosestCentroids(X: tf.Tensor, centroids: tf.Tensor) -> tf.Tensor:
     tf.Tensor
         idx, shape = [?,]    
     """
-    idx = tf.argmin(tf_fake_iou(X, centroids), axis=1)
-    return idx
+    return tf.argmin(tf_fake_iou(X, centroids), axis=1)
 
 
 def computeCentroids(X: np.ndarray, idx: np.ndarray, k: int) -> np.ndarray:
@@ -99,20 +98,18 @@ def plotProgresskMeans(X, centroids_history, idx, K, i):
             plt.plot(np.r_[centroids_history[i + 1][j, 0], centroids_history[i][j, 0]],
                      np.r_[centroids_history[i + 1][j, 1], centroids_history[i][j, 1]], 'k--')
     # Title
-    plt.title('Iteration number {}'.format(i + 1))
+    plt.title(f'Iteration number {i + 1}')
 
 
 def tile_x(x: np.ndarray, k: int):
     # tile the array
     x = x[:, np.newaxis, :]
-    x = np.tile(x, (1, k, 1))
-    return x
+    return np.tile(x, (1, k, 1))
 
 
 def tile_c(initial_centroids: np.ndarray, m: int):
     c = initial_centroids[np.newaxis, :, :]
-    c = np.tile(c, (m, 1, 1))
-    return c
+    return np.tile(c, (m, 1, 1))
 
 
 def build_kmeans_graph(new_x: np.ndarray, new_c: np.ndarray):
@@ -145,13 +142,9 @@ def runkMeans(X: np.ndarray, initial_centroids: np.ndarray, max_iters: int,
     m, _ = X.shape
     k, _ = initial_centroids.shape
 
-    # history list
-    centroid_history = []
-
     # save history
     centroids = initial_centroids.copy()
-    centroid_history.append(centroids.copy())
-
+    centroid_history = [centroids.copy()]
     # build tensorflow graph
     new_x, new_c = tile_x(X, k), tile_c(initial_centroids, m)
     assert new_x.shape == new_c.shape
@@ -162,7 +155,7 @@ def runkMeans(X: np.ndarray, initial_centroids: np.ndarray, max_iters: int,
     config.gpu_options.allow_growth = True
     sess = tf.Session(config=config)
 
-    for i in range(max_iters):
+    for _ in range(max_iters):
         idx_ = sess.run(idx, feed_dict={in_x: new_x, in_c: new_c})
         new_centrois = computeCentroids(X, idx_, k)
         centroid_history.append(new_centrois.copy())

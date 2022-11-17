@@ -54,10 +54,7 @@ def _preprocess_numpy_input(x, data_format, mode, **kwargs):
     else:
         if data_format == 'channels_first':
             # 'RGB'->'BGR'
-            if x.ndim == 3:
-                x = x[::-1, ...]
-            else:
-                x = x[:, ::-1, ...]
+            x = x[::-1, ...] if x.ndim == 3 else x[:, ::-1, ...]
         else:
             # 'RGB'->'BGR'
             x = x[..., ::-1]
@@ -129,10 +126,7 @@ def _preprocess_symbolic_input(x, data_format, mode, **kwargs):
     else:
         if data_format == 'channels_first':
             # 'RGB'->'BGR'
-            if backend.ndim(x) == 3:
-                x = x[::-1, ...]
-            else:
-                x = x[:, ::-1, ...]
+            x = x[::-1, ...] if backend.ndim(x) == 3 else x[:, ::-1, ...]
         else:
             # 'RGB'->'BGR'
             x = x[..., ::-1]
@@ -185,7 +179,7 @@ def preprocess_input(x, data_format=None, mode='caffe', **kwargs):
     if data_format is None:
         data_format = backend.image_data_format()
     if data_format not in {'channels_first', 'channels_last'}:
-        raise ValueError('Unknown data_format ' + str(data_format))
+        raise ValueError(f'Unknown data_format {str(data_format)}')
 
     if isinstance(x, np.ndarray):
         return _preprocess_numpy_input(x, data_format=data_format,
@@ -278,18 +272,16 @@ def _obtain_input_shape(input_shape,
                     'However, it was passed an input_shape with ' +
                     str(input_shape[-1]) + ' input channels.')
             default_shape = (default_size, default_size, input_shape[-1])
+    elif data_format == 'channels_first':
+        default_shape = (3, default_size, default_size)
     else:
-        if data_format == 'channels_first':
-            default_shape = (3, default_size, default_size)
-        else:
-            default_shape = (default_size, default_size, 3)
+        default_shape = (default_size, default_size, 3)
     if weights == 'imagenet' and require_flatten:
-        if input_shape is not None:
-            if input_shape != default_shape:
-                raise ValueError('When setting `include_top=True` '
-                                 'and loading `imagenet` weights, '
-                                 '`input_shape` should be ' +
-                                 str(default_shape) + '.')
+        if input_shape is not None and input_shape != default_shape:
+            raise ValueError(
+                f'When setting `include_top=True` and loading `imagenet` weights, `input_shape` should be {default_shape}.'
+            )
+
         return default_shape
     if input_shape:
         if data_format == 'channels_first':
@@ -306,31 +298,31 @@ def _obtain_input_shape(input_shape,
                                      str(min_size) + 'x' + str(min_size) +
                                      '; got `input_shape=' +
                                      str(input_shape) + '`')
-        else:
-            if input_shape is not None:
-                if len(input_shape) != 3:
-                    raise ValueError(
-                        '`input_shape` must be a tuple of three integers.')
-                if input_shape[-1] != 3 and weights == 'imagenet':
-                    raise ValueError('The input must have 3 channels; got '
-                                     '`input_shape=' + str(input_shape) + '`')
-                if ((input_shape[0] is not None and input_shape[0] < min_size) or
-                   (input_shape[1] is not None and input_shape[1] < min_size)):
-                    raise ValueError('Input size must be at least ' +
-                                     str(min_size) + 'x' + str(min_size) +
-                                     '; got `input_shape=' +
-                                     str(input_shape) + '`')
+        elif input_shape is not None:
+            if len(input_shape) != 3:
+                raise ValueError(
+                    '`input_shape` must be a tuple of three integers.')
+            if input_shape[-1] != 3 and weights == 'imagenet':
+                raise ValueError('The input must have 3 channels; got '
+                                 '`input_shape=' + str(input_shape) + '`')
+            if ((input_shape[0] is not None and input_shape[0] < min_size) or
+               (input_shape[1] is not None and input_shape[1] < min_size)):
+                raise ValueError('Input size must be at least ' +
+                                 str(min_size) + 'x' + str(min_size) +
+                                 '; got `input_shape=' +
+                                 str(input_shape) + '`')
+    elif require_flatten:
+        input_shape = default_shape
     else:
-        if require_flatten:
-            input_shape = default_shape
-        else:
-            if data_format == 'channels_first':
-                input_shape = (3, None, None)
-            else:
-                input_shape = (None, None, 3)
-    if require_flatten:
-        if None in input_shape:
-            raise ValueError('If `include_top` is True, '
-                             'you should specify a static `input_shape`. '
-                             'Got `input_shape=' + str(input_shape) + '`')
+        input_shape = (
+            (3, None, None)
+            if data_format == 'channels_first'
+            else (None, None, 3)
+        )
+
+    if require_flatten and None in input_shape:
+        raise ValueError(
+            f'If `include_top` is True, you should specify a static `input_shape`. Got `input_shape={str(input_shape)}`'
+        )
+
     return input_shape

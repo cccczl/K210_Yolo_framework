@@ -29,12 +29,12 @@ def restore_from_pkl(sess: tf.Session, varlist: list, pklfile: str):
                 assgin_list.append(tf.assign(var, tensordict[k]))
                 cnt += 1
     assert l == cnt
-    for i in range(len(assgin_list)):
-        sess.run(assgin_list[i])
+    for assgin in assgin_list:
+        sess.run(assgin)
 
 
 def restore_ckpt(sess: tf.Session, depth_multiplier: float, var_list: list, ckptdir: str):
-    if ckptdir == '' or ckptdir == None:
+    if not ckptdir or ckptdir is None:
         pass
     elif 'pkl' in ckptdir:
         restore_from_pkl(sess, tf.global_variables(), ckptdir)
@@ -57,7 +57,7 @@ class Helper(object):
         self.out_hw = np.array(out_hw)
         assert self.out_hw.ndim == 2
         self.validation_split = validation_split  # type:float
-        if image_ann == None:
+        if image_ann is None:
             self.train_list = None
             self.test_list = None
         else:
@@ -415,7 +415,7 @@ class Helper(object):
                 yield img, true_box
 
     def _create_dataset(self, image_ann_list: np.ndarray, batch_size: int, rand_seed: int, is_training: bool, is_resize: bool) -> tf.data.Dataset:
-        print(INFO, 'data augment is ', str(is_training))
+        print(INFO, 'data augment is ', is_training)
 
         def _dataset_parser(img_path: str, true_box: np.ndarray):
             img = self._read_img(img_path.numpy().decode())
@@ -435,10 +435,19 @@ class Helper(object):
                     # NOTE use copy avoid change the annotaion value !
                     yield img_path, np.copy(true_box)
 
-        dataset = (tf.data.Dataset.from_generator(gen, (tf.framework_ops.dtypes.string, tf.float32), ([], [None, 5])).
-                   shuffle(batch_size * 500 if is_training == True else batch_size * 50, rand_seed).repeat().
-                   map(_parser_wrapper, tf.data.experimental.AUTOTUNE).
-                   batch(batch_size, True).prefetch(tf.data.experimental.AUTOTUNE))
+        dataset = (
+            tf.data.Dataset.from_generator(
+                gen, (tf.framework_ops.dtypes.string, tf.float32), ([], [None, 5])
+            )
+            .shuffle(
+                batch_size * 500 if is_training else batch_size * 50, rand_seed
+            )
+            .repeat()
+            .map(_parser_wrapper, tf.data.experimental.AUTOTUNE)
+            .batch(batch_size, True)
+            .prefetch(tf.data.experimental.AUTOTUNE)
+        )
+
 
         return dataset
 
@@ -475,7 +484,7 @@ class Helper(object):
             xyxybox = self.center_to_corner(true_box[:, 1:])
             for i, a in enumerate(xyxybox):
                 classes = int(p[i])
-                r_top = tuple(a[0:2].astype(int))
+                r_top = tuple(a[:2].astype(int))
                 l_bottom = tuple(a[2:].astype(int))
                 r_bottom = (r_top[0], l_bottom[1])
                 org = (np.maximum(np.minimum(r_bottom[0], img.shape[1] - 12), 0),
@@ -502,8 +511,7 @@ class Helper(object):
             x2 = (true_box[:, 0:1] + true_box[:, 2:3] / 2)
             y2 = (true_box[:, 1:2] + true_box[:, 3:4] / 2)
 
-        xyxy_box = np.hstack([x1, y1, x2, y2])
-        return xyxy_box
+        return np.hstack([x1, y1, x2, y2])
 
     def corner_to_center(self, xyxy_box, from_all_scale=True):
         if from_all_scale:
@@ -517,8 +525,7 @@ class Helper(object):
             w = (xyxy_box[:, 2:3] - xyxy_box[:, 0:1])
             h = (xyxy_box[:, 3:4] - xyxy_box[:, 1:2])
 
-        true_box = np.hstack([x, y, w, h])
-        return true_box
+        return np.hstack([x, y, w, h])
 
 
 def tf_xywh_to_all(grid_pred_xy: tf.Tensor, grid_pred_wh: tf.Tensor, layer: int, h: Helper) -> [tf.Tensor, tf.Tensor]:
@@ -654,9 +661,7 @@ def tf_iou(pred_xy: tf.Tensor, pred_wh: tf.Tensor, vaild_xy: tf.Tensor, vaild_wh
     intersect_area = intersect_wh[..., 0] * intersect_wh[..., 1]
     b1_area = b1_wh[..., 0] * b1_wh[..., 1]
     b2_area = b2_wh[..., 0] * b2_wh[..., 1]
-    iou = intersect_area / (b1_area + b2_area - intersect_area)
-
-    return iou
+    return intersect_area / (b1_area + b2_area - intersect_area)
 
 
 def calc_ignore_mask(t_xy_A: tf.Tensor, t_wh_A: tf.Tensor, p_xy: tf.Tensor, p_wh: tf.Tensor, obj_mask: tf.Tensor, iou_thresh: float, layer: int, helper: Helper) -> tf.Tensor:

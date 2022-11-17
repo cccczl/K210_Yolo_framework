@@ -49,7 +49,7 @@ def main(args, train_set, class_num, pre_ckpt, model_def,
     network = eval(model_def)  # type :yolo_mobilev2
     yolo_model, yolo_model_warpper = network([image_size[0], image_size[1], 3], len(h.anchors[0]), class_num, alpha=depth_multiplier)
 
-    if pre_ckpt != None and pre_ckpt != 'None' and pre_ckpt != '':
+    if pre_ckpt not in [None, 'None', '']:
         if 'h5' in pre_ckpt:
             yolo_model_warpper.load_weights(str(pre_ckpt))
             print(INFO, f' Load CKPT {str(pre_ckpt)}')
